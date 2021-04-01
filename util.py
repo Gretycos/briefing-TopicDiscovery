@@ -18,21 +18,31 @@ logger = logging.getLogger(__name__)
 DEFAULT = './tmp/default/'
 NEW = './tmp/new/new_topic'
 UPDATE = './tmp/new/new_topic'
+TASK = ('tok/coarse',)
 
 
 def test():
-    for days in range(1,0,-1):
-        target_date = datetime.now().date() + timedelta(days=-days)
-        with open("./predict/{}.json".format(target_date), "r", encoding="utf-8") as f:
-            old_data = json.load(f)
-            with open("./predict/top/{}.json".format(target_date), "r", encoding="utf-8") as f1:
-                new_data = json.load(f1)
-                for nd in new_data:
-                    for od in old_data:
-                        if nd['topic'] == od ['topic']:
-                            nd['kw'] = od ['kw']
-                with open("./predict/top/{}.json".format(target_date), "w", encoding="utf-8") as f2:
-                    json.dump(new_data, f2)
+    # for days in range(1,0,-1):
+    #     target_date = datetime.now().date() + timedelta(days=-days)
+    #     with open("./predict/{}.json".format(target_date), "r", encoding="utf-8") as f:
+    #         old_data = json.load(f)
+    #         with open("./predict/top/{}.json".format(target_date), "r", encoding="utf-8") as f1:
+    #             new_data = json.load(f1)
+    #             for nd in new_data:
+    #                 for od in old_data:
+    #                     if nd['topic'] == od ['topic']:
+    #                         nd['kw'] = od ['kw']
+    #             with open("./predict/top/{}.json".format(target_date), "w", encoding="utf-8") as f2:
+    #                 json.dump(new_data, f2)
+    HanLP = hanlp.load(hanlp.pretrained.mtl.CLOSE_TOK_POS_NER_SRL_DEP_SDP_CON_ELECTRA_SMALL_ZH, verbose=True)
+    tasks = list(HanLP.tasks.keys())
+    print(tasks)
+    for task in tasks:
+        if task not in TASK:
+            del HanLP[task]
+    tok = HanLP[TASK[0]]
+    tok.dict_combine = {'新冠', '新冠病毒'}
+    print(HanLP("梁万年还介绍说，对湖北省蝙蝠以及中国各地大量的家畜家禽、野生动物等检测均未发现新冠病毒，也未发现疫情发生前后有新冠病毒在家畜家禽、野生动物中循环的证据。")["tok/coarse"])
     pass
 
 
@@ -44,6 +54,12 @@ def load_word_segmentation_tool():
     logger.info("loading word segmentation tool")
     # HanLP = HanLPClient(url='https://www.hanlp.com/api', auth='MTE4QGJicy5oYW5scC5jb206MXFFOHhWUkJNQXBNdlh0NA==')
     HanLP = hanlp.load(hanlp.pretrained.mtl.CLOSE_TOK_POS_NER_SRL_DEP_SDP_CON_ELECTRA_SMALL_ZH, verbose=True,devices=0)
+    tasks = list(HanLP.tasks.keys())
+    for task in tasks:
+        if task not in TASK:
+            del HanLP[task]
+    tok = HanLP[TASK[0]]
+    tok.dict_combine = {'新冠', '新冠病毒'}
     ltp = LTP()
     logger.info("loaded word segmentation tool")
     return HanLP,ltp
