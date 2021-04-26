@@ -8,18 +8,18 @@ Usage:
 
 Options:
     -h --help                               show this screen.
-    --days=<int>                            process data before days [default: 88]
-    --proportion=<float>                    load how many data for training [default: 0.7]
-    --num_topics=<int>                      num of topics [default: 10]
-    --chunk_size=<int>                      num of documents to be used in each training chunk [default: 2000]
-    --passes=<int>                          num of passes through the corpus during training [default: 40]
+    --days=<int>                            process data before days [default: 67]
+    --proportion=<float>                    load how many data for training [default: 0.8]
+    --num_topics=<int>                      num of topics [default: 60]
+    --chunk_size=<int>                      num of documents to be used in each training chunk [default: 12000]
+    --passes=<int>                          num of passes through the corpus during training [default: 10]
     --alpha                                 a-priori belief for the each topics' probability [default: auto]
     --eta                                   a-priori belief on word probability [default: auto]
-    --decay=<float>                         weight what pct of the previous lambda value is forgotten [default: 0.85]
+    --decay=<float>                         weight what pct of the previous lambda value is forgotten [default: 0.7]
     --offset=<float>                        controls how much we slow down 1st steps or few iterations [default: 1.0]
     --eval_every=<int>                      estimate log perplexity every that many updates [default: 10]
-    --iterations=<int>                      max number of iterations through the corpus [default: 400]
-    --gamma_threshold=<float>               min change in gamma parameters to continue iterating [default: 0.001]
+    --iterations=<int>                      max number of iterations through the corpus [default: 100]
+    --gamma_threshold=<float>               min change in gamma parameters to continue iterating [default: 0.01]
     --minimum_probability=<float>           prob of topics lower than this will be filtered out [default: 0.01]
     --random_state=<int>                    Useful for reproducibility [default: 1]
     --per_word_topics                       most likely topics for each word
@@ -29,11 +29,13 @@ Options:
 
 from docopt import docopt
 from gensim.models import LdaModel, CoherenceModel
-from util import load_new_corpus, load_corpus_dictionary, load_update_corpus, save_json, save_ppl_coh
+from util import load_new_corpus, load_corpus_dictionary, load_update_corpus, save_json, save_ppl_coh, \
+    calculate_target_date
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 import os
+from datetime import datetime, timedelta
 # sys.path.append(os.path.dirname(sys.path[0]))
 
 # 进度记录
@@ -48,12 +50,15 @@ def train(args):
     perplexities = []
     coherence_values = []
     topics = range(2,int(args['--num_topics'])+1,2) if args['--all'] else range(int(args['--num_topics']),int(args['--num_topics'])+1)
-
+    if args['--all']:
+        target_date = calculate_target_date(float(args['--proportion'])) + timedelta(days=-1)
+    else:
+        target_date = datetime.now().date() + timedelta(days=-int(args['--days']))
     for num_topics in topics:
-        os.makedirs(name='./model/{}/'.format(num_topics), exist_ok=True)
+        os.makedirs(name='./model/{}/{}'.format(num_topics, target_date), exist_ok=True)
         try:
             logger.info("loading model")
-            lda_model = LdaModel.load('./model/{}/topic_{}.model'.format(num_topics, num_topics))
+            lda_model = LdaModel.load('./model/{}/{}/topic_{}.model'.format(num_topics, target_date, num_topics))
             corpus, dictionary = load_corpus_dictionary(float(args['--proportion']))
         except:
             logger.info("not found model saved")
@@ -77,15 +82,16 @@ def train(args):
                 per_word_topics=True if args['--per_word_topics'] else False
             )
             logger.info("saving trained model")
-            lda_model.save('./model/{}/topic_{}.model'.format(num_topics, num_topics))
+            lda_model.save('./model/{}/{}/topic_{}.model'.format(num_topics, target_date ,num_topics))
         finally:
             perplexities.append(np.exp2(-lda_model.log_perplexity(corpus)))
+            # u_mass得分越低越好
             coherence_values.append(CoherenceModel(model=lda_model, corpus=corpus, coherence='u_mass').get_coherence())
             lda_model.print_topics(5,5)
 
 
     if args['--all']:
-        os.makedirs(name='./pic/{}/'.format(args['--days']), exist_ok=True)
+        os.makedirs(name='./pic/{}/'.format(target_date), exist_ok=True)
         draw_graph_perplexity(args,perplexities,topics)
         draw_graph_coherence(args,coherence_values,topics)
     else:
@@ -131,12 +137,14 @@ def update(args):
                                                                                     int(args['--num_topics']) + 1)
     for topic in topics:
         logger.info("loading model")
-        model = LdaModel.load('./model/{}/topic_{}.model'.format(topic, topic))
+        target_date = datetime.now().date() + timedelta(days=-int(args['--days'])) + timedelta(days=-1)
+        model = LdaModel.load('./model/{}/{}/topic_{}.model'.format(topic, target_date, topic))
         update_corpus = load_update_corpus(int(args['--days']))
         logger.info("updating model")
         model.update(update_corpus)
         logger.info("saving updated model")
-        model.save('./model/{}/topic_{}.model'.format(topic, topic))
+        os.makedirs(name='./model/{}/{}'.format(topic, target_date + timedelta(days=1)), exist_ok=True)
+        model.save('./model/{}/{}/topic_{}.model'.format(topic, target_date + timedelta(days=1), topic))
         # corpus, dictionary = load_update_corpus()
         # logger.info("training to update model")
         # lda_model = LdaModel(
@@ -169,7 +177,8 @@ def predict(args):
     :param args: dict
     :return: None
     """
-    lda_model = LdaModel.load('./model/{}/topic_{}.model'.format(args['--num_topics'],args['--num_topics']))
+    target_date = datetime.now().date() + timedelta(days=-int(args['--days'])) + timedelta(days=-1)
+    lda_model = LdaModel.load('./model/{}/{}/topic_{}.model'.format(args['--num_topics'], target_date, args['--num_topics']))
     topics = lda_model.show_topics(num_topics=int(args['--num_topics']), num_words=5,log=False,formatted=False)
     topics_dict = {} # 主题编号与关键词
     topics_count_dict = {} # 主题-计数
@@ -231,7 +240,8 @@ def predict(args):
 
 def main():
     args = docopt(__doc__)
-
+    # target_date = calculate_target_date(float(args['--proportion'])) + timedelta(days=-1)
+    # print(target_date)
     if args['train']:
         train(args)
     elif args['predict']:

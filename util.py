@@ -41,8 +41,8 @@ def test():
         if task not in TASK:
             del HanLP[task]
     tok = HanLP[TASK[0]]
-    tok.dict_combine = {'新冠', '新冠病毒'}
-    print(HanLP("梁万年还介绍说，对湖北省蝙蝠以及中国各地大量的家畜家禽、野生动物等检测均未发现新冠病毒，也未发现疫情发生前后有新冠病毒在家畜家禽、野生动物中循环的证据。")["tok/coarse"])
+    tok.dict_combine = {'新冠', '新冠病毒', '新冠肺炎'}
+    print(HanLP("中新网3月31日电 据云南省委宣传部微博消息，3月31日晚，瑞丽市新冠肺炎疫情防控第二场新闻发布会召开，通报瑞丽市新冠肺炎疫防控情最新情况。")["tok/coarse"])
     pass
 
 
@@ -59,7 +59,7 @@ def load_word_segmentation_tool():
         if task not in TASK:
             del HanLP[task]
     tok = HanLP[TASK[0]]
-    tok.dict_combine = {'新冠', '新冠病毒'}
+    tok.dict_combine = {'新冠', '新冠病毒', '新冠肺炎'}
     ltp = LTP()
     logger.info("loaded word segmentation tool")
     return HanLP,ltp
@@ -77,6 +77,15 @@ def load_stop_words():
         return stop_words
 
 
+def calculate_target_date(proportion):
+    session = load_session()
+    cursor = session.execute("select count(publish_date) "
+                             "from (select distinct DATE_FORMAT(publish_time,'%Y-%m-%d') as publish_date "
+                             "      from news) as a")
+    all_days = cursor.fetchone()[0]
+    target_date = datetime.now().date() + timedelta(days=-int((1 - proportion) * all_days))
+    return target_date
+
 def load_raw_documents(proportion):
     """
     从数据库中加载生文档
@@ -84,12 +93,13 @@ def load_raw_documents(proportion):
     """
     logger.info("loading {}% raw documents from database".format(int(proportion*100)))
     session = load_session()
-    cursor = session.execute("select count(publish_date) "
-                             "from (select distinct DATE_FORMAT(publish_time,'%Y-%m-%d') as publish_date "
-                             "      from news) as a")
-    all_days = cursor.fetchone()[0]
-    target_date = datetime.now().date() + timedelta(days=-int((1-proportion)*all_days))
-    logger.info("loading data from ~ - {}".format(target_date))
+    # cursor = session.execute("select count(publish_date) "
+    #                          "from (select distinct DATE_FORMAT(publish_time,'%Y-%m-%d') as publish_date "
+    #                          "      from news) as a")
+    # all_days = cursor.fetchone()[0]
+    # 目标日期以今天作为基准
+    target_date = calculate_target_date(proportion)
+    logger.info("loading data from ~ - {}".format(target_date + timedelta(days=-1)))
     raw_corpus = []
     for row in session.query(News.article_id,News.content).filter(News.publish_time < target_date):
         raw_corpus.append((row[0],row[1]))
@@ -146,6 +156,7 @@ def load_corpus_dictionary(proportion):
         raw_documents = load_raw_documents(proportion)
         documents = data_clean(raw_documents)
         dictionary = corpora.Dictionary([doc[1] for doc in documents])
+        os.makedirs(name=DEFAULT, exist_ok=True)
         dictionary.save(DEFAULT+'topic.dict')  # 存储字典
         corpus = [dictionary.doc2bow(doc[1]) for doc in documents]
         corpora.MmCorpus.serialize(DEFAULT+'topic.mm', corpus)  # 存储语料库
@@ -186,6 +197,7 @@ def load_new_corpus(days):
         dictionary = corpora.Dictionary().load(DEFAULT+'topic.dict') # 加载词典
         new_corpus = [dictionary.doc2bow(doc[1]) for doc in new_documents]
         new_corpus_id = [[doc[0],doc[2]] for doc in new_documents]
+        os.makedirs(name=NEW, exist_ok=True)
         corpora.MmCorpus.serialize(NEW+'.mm', new_corpus)
         np.save(NEW+'_id.npy', np.array(new_corpus_id))
         logger.info("loaded new corpus")
@@ -231,6 +243,7 @@ def load_update_corpus(days):
         update_documents = data_clean(update_raw_documents)
         dictionary = corpora.Dictionary().load(DEFAULT+'topic.dict')  # 加载词典
         update_corpus = [dictionary.doc2bow(doc[1]) for doc in update_documents]
+        os.makedirs(name=UPDATE, exist_ok=True)
         corpora.MmCorpus.serialize(UPDATE+'.mm', update_corpus)  # 存储语料库
     logger.info("loaded update corpus")
     return update_corpus
@@ -239,8 +252,10 @@ def load_update_corpus(days):
 def save_json(dict_list,flag,days):
     target_date = datetime.now().date() + timedelta(days=-days)
     if flag == 'full':
+        os.makedirs(name='./predict/', exist_ok=True)
         filename = './predict/{}.json'.format(target_date)
     elif flag == 'top':
+        os.makedirs(name='./predict/top', exist_ok=True)
         filename = './predict/top/{}.json'.format(target_date)
     else:
         raise NameError
