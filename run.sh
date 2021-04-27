@@ -1,6 +1,6 @@
 #!/bin/bash
 
-perform_model="train"
+perform_mode="train"
 all_flag="false"
 n_topics=60
 days_before=1
@@ -12,12 +12,12 @@ func() {
 
 while getopts "tuprwoan:d:" OPT; do
     case $OPT in
-        t) perform_model="train";;
-        u) perform_model="update";;
-        p) perform_model="predict";;
-        r) perform_model="remove";;
-        w) perform_model="whole";;
-        o) perform_model="one";;
+        t) perform_mode="train";;
+        u) perform_mode="update";;
+        p) perform_mode="predict";;
+        r) perform_mode="remove";;
+        w) perform_mode="whole";;
+        o) perform_mode="one";;
         a) all_flag="true";;
         n) n_topics=$OPTARG;;
         d) days_before=$OPTARG;;
@@ -25,25 +25,25 @@ while getopts "tuprwoan:d:" OPT; do
     esac
 done
 
-if [ $perform_model = "train" ]; then
+if [ $perform_mode = "train" ]; then
     if [ $all_flag = "true" ]; then
       python run.py train --num_topics="$n_topics" --all # all训练用不到days_before
     else
       echo "train model must use 'all' option"
     fi
-elif [ $perform_model = "update" ]; then
+elif [ $perform_mode = "update" ]; then
     if [ $all_flag = "true" ]; then
       python run.py update --num_topics="$n_topics" --all --days="$days_before"
     else
       echo "update model must use 'all' option"
     fi
-elif [ $perform_model = "predict" ]; then
+elif [ $perform_mode = "predict" ]; then
     if [ "$days_before" = 1 ]; then
         python run.py predict --num_topics=20 --days="$days_before"
     fi
-elif [ $perform_model = "delete" ]; then
+elif [ $perform_mode = "delete" ]; then
     rm ./tmp/new/new_topic*
-elif [ $perform_model = "whole" ]; then
+elif [ $perform_mode = "whole" ]; then
   if [ "$days_before" != 1 ]; then
       if [ $all_flag = "true" ]; then
       for (( i = "$days_before"; i > 0; i-- )); do
@@ -61,7 +61,7 @@ elif [ $perform_model = "whole" ]; then
       done
     fi
   fi
-elif [ $perform_model = "one" ]; then
+elif [ $perform_mode = "one" ]; then
   if [ "$days_before" = 1 ]; then
     rm ./tmp/new/new_topic*
     python run.py predict --num_topics=20 --days="$days_before"

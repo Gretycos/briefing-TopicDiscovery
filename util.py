@@ -16,7 +16,9 @@ import os
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 logger = logging.getLogger(__name__)
 DEFAULT = './tmp/default/'
+NEW_PATH = './tmp/new/'
 NEW = './tmp/new/new_topic'
+UPDATE_PATH = './tmp/new/'
 UPDATE = './tmp/new/new_topic'
 TASK = ('tok/coarse',)
 
@@ -197,7 +199,7 @@ def load_new_corpus(days):
         dictionary = corpora.Dictionary().load(DEFAULT+'topic.dict') # 加载词典
         new_corpus = [dictionary.doc2bow(doc[1]) for doc in new_documents]
         new_corpus_id = [[doc[0],doc[2]] for doc in new_documents]
-        os.makedirs(name=NEW, exist_ok=True)
+        os.makedirs(name=NEW_PATH, exist_ok=True)
         corpora.MmCorpus.serialize(NEW+'.mm', new_corpus)
         np.save(NEW+'_id.npy', np.array(new_corpus_id))
         logger.info("loaded new corpus")
@@ -243,7 +245,7 @@ def load_update_corpus(days):
         update_documents = data_clean(update_raw_documents)
         dictionary = corpora.Dictionary().load(DEFAULT+'topic.dict')  # 加载词典
         update_corpus = [dictionary.doc2bow(doc[1]) for doc in update_documents]
-        os.makedirs(name=UPDATE, exist_ok=True)
+        os.makedirs(name=UPDATE_PATH, exist_ok=True)
         corpora.MmCorpus.serialize(UPDATE+'.mm', update_corpus)  # 存储语料库
     logger.info("loaded update corpus")
     return update_corpus

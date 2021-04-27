@@ -92,14 +92,14 @@ def train(args):
 
     if args['--all']:
         os.makedirs(name='./pic/{}/'.format(target_date), exist_ok=True)
-        draw_graph_perplexity(args,perplexities,topics)
-        draw_graph_coherence(args,coherence_values,topics)
+        draw_graph_perplexity(args,perplexities,topics,target_date)
+        draw_graph_coherence(args,coherence_values,topics,target_date)
     else:
         save_ppl_coh(perplexities[0],coherence_values[0],int(args['--days']))
         logger.info("perplexity: {}; coherence: {}.".format(perplexities[0],coherence_values[0]))
 
 
-def draw_graph_perplexity(args,perplexities,topics):
+def draw_graph_perplexity(args,perplexities,topics,target_date):
     _, ax = plt.subplots()
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True)) # 整数坐标轴
     ax.xaxis.set_major_locator(ticker.MultipleLocator(2)) # 坐标轴间隔
@@ -109,11 +109,11 @@ def draw_graph_perplexity(args,perplexities,topics):
     plt.grid(True,linestyle='--')
     plt.xlabel("Num of Topics")
     plt.ylabel("Perplexity")
-    plt.savefig("./pic/{}/topics_perplexity_{}.jpg".format(args['--days'],args["--num_topics"]))
+    plt.savefig("./pic/{}/topics_perplexity_{}.jpg".format(target_date,args["--num_topics"]))
     # plt.show()
 
 
-def draw_graph_coherence(args,coherence_values,topics):
+def draw_graph_coherence(args,coherence_values,topics,target_date):
     _, ax = plt.subplots()
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
     ax.xaxis.set_major_locator(ticker.MultipleLocator(2))
@@ -123,7 +123,7 @@ def draw_graph_coherence(args,coherence_values,topics):
     plt.grid(True,linestyle='--')
     plt.xlabel("Num of Topics")
     plt.ylabel("Coherence Value")
-    plt.savefig("./pic/{}/topics_coherence_{}.jpg".format(args['--days'],args["--num_topics"]))
+    plt.savefig("./pic/{}/topics_coherence_{}.jpg".format(target_date,args["--num_topics"]))
     # plt.show()
 
 
