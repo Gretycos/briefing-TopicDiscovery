@@ -7,6 +7,9 @@ from datetime import datetime, timedelta
 from gensim import corpora
 import numpy as np
 import json
+
+from sqlalchemy import func
+
 from dao import load_session
 from dao.News import News
 from ltp import LTP
@@ -48,6 +51,15 @@ def test():
     pass
 
 
+def checkTodayData():
+    session = load_session()
+    target_date = datetime.now().date()
+    logger.info("checking data on {}".format(target_date))
+    document_count = session.query(func.count(News.article_id)).filter(News.publish_time > target_date)
+    session.close()
+    logger.info("checked data on {}".format(target_date))
+    return document_count > 0
+
 def load_word_segmentation_tool():
     """
     加载分词工具
@@ -55,7 +67,7 @@ def load_word_segmentation_tool():
     """
     logger.info("loading word segmentation tool")
     # HanLP = HanLPClient(url='https://www.hanlp.com/api', auth='MTE4QGJicy5oYW5scC5jb206MXFFOHhWUkJNQXBNdlh0NA==')
-    HanLP = hanlp.load(hanlp.pretrained.mtl.CLOSE_TOK_POS_NER_SRL_DEP_SDP_CON_ELECTRA_SMALL_ZH, verbose=True,devices=0)
+    HanLP = hanlp.load(hanlp.pretrained.mtl.CLOSE_TOK_POS_NER_SRL_DEP_SDP_CON_ELECTRA_SMALL_ZH, verbose=True)
     tasks = list(HanLP.tasks.keys())
     for task in tasks:
         if task not in TASK:
@@ -280,7 +292,6 @@ def save_ppl_coh(ppl, coh, days):
         old_data = [diction]
         with open("./ppl_coh.json", "w", encoding="utf-8") as f:
             json.dump(old_data, f)
-
 
 
 

@@ -55,18 +55,20 @@ elif [ $perform_mode = "whole" ]; then
     else
       for (( i = "$days_before"; i > 0; i-- )); do
         rm ./tmp/new/new_topic*
-        python run.py predict --num_topics=20 --days="$i"
-        python run.py update --num_topics=20 --days="$i"
-        python run.py train --num_topics=20 --days="$i"
+#        python run.py predict --num_topics=20 --days="$i"
+#        python run.py update --num_topics=20 --days="$i"
+#        python run.py train --num_topics=20 --days="$i"
+        python run.py put --num_topics=20 --days="$i"
       done
     fi
   fi
 elif [ $perform_mode = "one" ]; then
-  if [ "$days_before" = 1 ]; then
+  if [ "$days_before" -ge 0 ]; then
     rm ./tmp/new/new_topic*
-    python run.py predict --num_topics=20 --days="$days_before"
-    python run.py update --num_topics=20 --days="$days_before"
-    python run.py train --num_topics=20 --days="$days_before"
+#    python run.py predict --num_topics=20 --days="$days_before"
+#    python run.py update --num_topics=20 --days="$days_before"
+#    python run.py train --num_topics=20 --days="$days_before"
+    python run.py put --num_topics=20 --days="$days_before"
   fi
 else
   echo "Invalid Option Selected"

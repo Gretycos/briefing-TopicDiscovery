@@ -5,6 +5,7 @@ Usage:
     run.py train --num_topics=<int> [options]
     run.py predict --num_topics=<int> [options]
     run.py update --num_topics=<int> [options]
+    run.py put --num_topics=<int> [options]
 
 Options:
     -h --help                               show this screen.
@@ -30,7 +31,7 @@ Options:
 from docopt import docopt
 from gensim.models import LdaModel, CoherenceModel
 from util import load_new_corpus, load_corpus_dictionary, load_update_corpus, save_json, save_ppl_coh, \
-    calculate_target_date
+    calculate_target_date, checkTodayData
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
@@ -248,6 +249,13 @@ def main():
         predict(args)
     elif args['update']:
         update(args)
+    elif args['put']:
+        if int(args['--days']) == 0 and not checkTodayData:
+            logger.error("not found today's data")
+            return
+        predict(args)
+        update(args)
+        train(args)
     else:
         raise RuntimeError('invalid run mode')
 
